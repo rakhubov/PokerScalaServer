@@ -11,6 +11,7 @@ val catsTaglessVersion = "0.11"
 val catsEffectVersion = "2.2.0"
 val doobieVersion = "0.9.0"
 val log4CatsVersion = "1.1.1"
+val scalaTestVersion = "3.1.0.0-RC2"
 
 libraryDependencies ++= Seq(
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
@@ -30,9 +31,9 @@ libraryDependencies ++= Seq(
   "io.circe" %% "circe-parser" % circeVersion,
   "io.chrisdavenport" % "fuuid_2.13" % "0.5.0",
   "io.chrisdavenport" %% "log4cats-slf4j" % log4CatsVersion,
-//  "io.chrisdavenport" %% "fuuid-circe" % "0.5.0",
-//  "io.chrisdavenport" %% "fuuid-doobie" % "0.5.0",
   "org.tpolecat" %% "doobie-core" % doobieVersion,
   "org.tpolecat" %% "doobie-h2" % doobieVersion,
-  "org.tpolecat" %% "doobie-hikari" % doobieVersion
+  "org.tpolecat" %% "doobie-hikari" % doobieVersion,
+  "org.scalatestplus" %% "scalatestplus-scalacheck" % scalaTestVersion % Test,
+  "org.scalatestplus" %% "selenium-2-45" % scalaTestVersion % Test
 )

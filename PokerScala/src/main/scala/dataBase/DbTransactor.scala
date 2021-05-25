@@ -18,7 +18,7 @@ object DbTransactor {
     for {
       awaitConnect <- ExecutionContexts.fixedThreadPool[F](10)
       executeJDBC <- Blocker[F]
-      connett <- HikariTransactor.newHikariTransactor[F](
+      connect <- HikariTransactor.newHikariTransactor[F](
         driverClassName = dbDriverName,
         url = dbUrl,
         user = dbUser,
@@ -26,5 +26,5 @@ object DbTransactor {
         connectEC = awaitConnect, // await connection on this EC
         blocker = executeJDBC // execute JDBC operations on this EC
       )
-    } yield connett
+    } yield connect
 }
