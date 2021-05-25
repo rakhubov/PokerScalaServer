@@ -54,51 +54,58 @@ object CardManipulation {
       } yield ()
     } else IO.unit
 
-  def interpretationCardCombination(player: Player): String = {
+  def interpretationCardCombination(
+      player: Player,
+      startMessage: String = "You have a"
+  ): String = {
     if (player.combination == 1)
-      s"You have a ${cardCombination getOrElse (1, "")} " +
-        s"${cardIntToString getOrElse (player.cardForCombination.lift(0).getOrElse(numberNotEqualCard), "")} with Kickers: " +
+      s"$startMessage ${cardCombination getOrElse (1, "")} " +
+        s"${cardIntToString getOrElse (player.cardForCombination.lift(0).getOrElse(numberNotEqualCard), "")}" +
+        s" with Kickers: " +
         s" ${cardIntToString getOrElse (player.cardForCombination.lift(1).getOrElse(numberNotEqualCard), "")}, " +
         s"${cardIntToString getOrElse (player.cardForCombination.lift(2).getOrElse(numberNotEqualCard), "")}, " +
         s"${cardIntToString getOrElse (player.cardForCombination.lift(3).getOrElse(numberNotEqualCard), "")}, " +
         s"${cardIntToString getOrElse (player.cardForCombination.lift(4).getOrElse(numberNotEqualCard), "")}"
     else if (player.combination == 2)
-      s"You have a ${cardCombination getOrElse (2, "")} " +
-        s"${cardPower getOrElse (player.cardForCombination.lift(0).getOrElse(numberNotEqualCard), "")} with Kickers: " +
+      s"$startMessage ${cardCombination getOrElse (2, "")} " +
+        s"${cardPower getOrElse (player.cardForCombination.lift(0).getOrElse(numberNotEqualCard), "")}" +
+        s" with Kickers: " +
         s" ${powerKicker getOrElse (player.cardForCombination.lift(2).getOrElse(numberNotEqualCard), "")}, " +
         s"${powerKicker getOrElse (player.cardForCombination.lift(3).getOrElse(numberNotEqualCard), "")}, " +
         s"${powerKicker getOrElse (player.cardForCombination.lift(4).getOrElse(numberNotEqualCard), "")}"
     else if (player.combination == 3)
-      s"You have a ${cardCombination getOrElse (3, "")} of " +
+      s"$startMessage ${cardCombination getOrElse (3, "")} of " +
         s"${powerKicker getOrElse (player.cardForCombination.lift(0).getOrElse(numberNotEqualCard), "")} and " +
         s"${powerKicker getOrElse (player.cardForCombination.lift(2).getOrElse(numberNotEqualCard), "")}, " +
-        s" with Kicker:  " +
+        s"with Kicker:  " +
         s"${powerKicker getOrElse (player.cardForCombination.lift(4).getOrElse(numberNotEqualCard), "")}"
     else if (player.combination == 4)
-      s"You have a ${cardCombination getOrElse (4, "")} " +
-        s"${cardPower getOrElse (player.cardForCombination.lift(0).getOrElse(numberNotEqualCard), "")} with Kickers: " +
+      s"$startMessage ${cardCombination getOrElse (4, "")} " +
+        s"${cardPower getOrElse (player.cardForCombination.lift(0).getOrElse(numberNotEqualCard), "")}" +
+        s" with Kickers: " +
         s" ${cardIntToString getOrElse (player.cardForCombination.lift(3).getOrElse(numberNotEqualCard), "")}, " +
         s"${cardIntToString getOrElse (player.cardForCombination.lift(4).getOrElse(numberNotEqualCard), "")}"
     else if (player.combination == 5)
-      s"You have a ${cardCombination getOrElse (5, "")} to:  " +
+      s"$startMessage ${cardCombination getOrElse (5, "")} to:  " +
         s"${powerKicker getOrElse (player.cardForCombination.lift(0).getOrElse(numberNotEqualCard), "")}"
     else if (player.combination == 6)
-      s"You have a ${cardCombination getOrElse (6, "")} of:  " +
+      s"$startMessage ${cardCombination getOrElse (6, "")} of:  " +
         s"${cardIntToString getOrElse (player.cardForCombination.lift(0).getOrElse(numberNotEqualCard), "")}, " +
         s"${cardIntToString getOrElse (player.cardForCombination.lift(1).getOrElse(numberNotEqualCard), "")}, " +
         s"${cardIntToString getOrElse (player.cardForCombination.lift(2).getOrElse(numberNotEqualCard), "")}, " +
         s"${cardIntToString getOrElse (player.cardForCombination.lift(3).getOrElse(numberNotEqualCard), "")}, " +
         s"${cardIntToString getOrElse (player.cardForCombination.lift(4).getOrElse(numberNotEqualCard), "")}"
     else if (player.combination == 7)
-      s"You have a ${cardCombination getOrElse (7, "")} " +
+      s"$startMessage ${cardCombination getOrElse (7, "")} " +
         s"${cardPower getOrElse (player.cardForCombination.lift(0).getOrElse(numberNotEqualCard), "")}, and " +
         s"${cardPower getOrElse (player.cardForCombination.lift(3).getOrElse(numberNotEqualCard), "")}"
     else if (player.combination == 8)
-      s"You have a ${cardCombination getOrElse (8, "")} " +
-        s"${cardPower getOrElse (player.cardForCombination.lift(0).getOrElse(numberNotEqualCard), "")} with Kicker:  " +
+      s"$startMessage ${cardCombination getOrElse (8, "")} " +
+        s"${cardPower getOrElse (player.cardForCombination.lift(0).getOrElse(numberNotEqualCard), "")}" +
+        s" with Kicker:  " +
         s"${cardIntToString getOrElse (player.cardForCombination.lift(4).getOrElse(numberNotEqualCard), "")}"
     else if (player.combination == 9)
-      s"You have a ${cardCombination getOrElse (9, "")} to:  " +
+      s"$startMessage ${cardCombination getOrElse (9, "")} to:  " +
         s"${cardIntToString getOrElse (player.cardForCombination.lift(0).getOrElse(numberNotEqualCard), "")}"
     else ""
   }

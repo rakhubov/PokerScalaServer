@@ -137,10 +137,18 @@ object ServerPrivateCommand {
       someTableID = tableID.getOrElse(UUID.randomUUID())
       listPlayersDB <- fetchPlayers(someTableID).transact(connectToDataBase)
       listPlayer = listPlayersDB.map(player => PlayerFromPlayerDB(player))
-      winner = searchWinner(listPlayer)
-
-      map = "map fgfg fg fg" //s"$winner"
-    } yield map
+      listWinners = searchWinner(listPlayer)
+      winnerName =
+        if (listWinners.headOption.getOrElse(Player()).playerID == validID)
+          "YOU"
+        else
+          listWinners.headOption.getOrElse(Player()).name
+      winner = interpretationCardCombination(
+        listWinners.headOption.getOrElse(Player()),
+        s"$winnerName WON with a"
+      )
+      //  map = "map fgfg fg fg" //s"$winner"
+    } yield winner
   }
 
   def checkPrivatRequest(
