@@ -1,7 +1,7 @@
 import java.util.UUID
 import cats.effect.IO
 import io.chrisdavenport.fuuid.FUUID
-import GameData._
+import gameData.GameData._
 
 import scala.util.Random
 
