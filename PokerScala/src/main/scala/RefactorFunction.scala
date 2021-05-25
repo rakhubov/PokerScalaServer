@@ -58,11 +58,31 @@ object RefactorFunction {
     }
   }
 
-  def listToString[F](vector: List[F]): String =
-    vector.map(_.toString) match {
-      case c1 :: c2 :: c3 :: c4 :: c5 :: Nil =>
-        c1 + ' ' + c2 + ' ' + c3 + ' ' + c4 + ' ' + c5
-      case _ => ""
-    }
+  def listToString[F](list: List[F], acc: String = ""): String = {
+    if (list.size > 0) {
+      listToString(
+        list.drop(1),
+        acc + list.headOption.getOrElse(numberNotEqualCard).toString + " "
+      )
+    } else acc.trim
+  }
+
+  def listToName[F](list: List[F], acc: String = ""): String = {
+    if (list.size > 1) {
+      listToString(
+        list.drop(1),
+        acc + list.headOption.getOrElse(numberNotEqualCard).toString + ",\n"
+      )
+    } else if (list.size == 1)
+      acc + list.headOption.getOrElse(numberNotEqualCard).toString
+    else acc
+  }
+
+//  def listToString[F](list: List[F]): String =
+//    list.map(_.toString) match {
+//      case c1 :: c2 :: c3 :: c4 :: c5 :: Nil =>
+//        c1 + ' ' + c2 + ' ' + c3 + ' ' + c4 + ' ' + c5
+//      case _ => ""
+//    }
 
 }

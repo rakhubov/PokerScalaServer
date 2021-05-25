@@ -28,9 +28,9 @@ object GameData {
       playerID: UUID = UUID.randomUUID(),
       tableID: UUID = UUID.randomUUID(),
       name: String = "",
-      playerCard: String = "", //List[Int] = List(),
-      tableAndPlayerCard: String = "", //List[Int] = List()
-      cardForCombination: String = "", //List[Int] = List(),
+      playerCard: String = "",
+      tableAndPlayerCard: String = "",
+      cardForCombination: String = "",
       combination: Int = 0
 //      money: Int = 0,
 //      playerBid: Int = 0

@@ -4,7 +4,7 @@ import cats.effect.concurrent.Ref
 import doobie.Transactor
 import doobie.implicits._
 import GameData._
-import RefactorFunction.PlayerFromPlayerDB
+import RefactorFunction.{PlayerFromPlayerDB, listToName, listToString}
 
 import java.util.UUID
 import RequestInDB._
@@ -85,7 +85,8 @@ object ServerPrivateCommand {
           ) == false) && playerCard.size == 7
         ) {
           val stringCard = playerCard.map(card =>
-            (cardIntToString getOrElse (card, "")) + ", "
+            "\n" +
+              (cardIntToString getOrElse (card, "")) + ", "
           )
           "Table card:  " + stringCard.lift(0).getOrElse("") + stringCard
             .lift(1)
@@ -220,7 +221,6 @@ object ServerSharedCommand {
               _ <- playerSitsAtTable(playerID, tableID).transact(
                 connectToDataBase
               )
-              //all player
               messageComplete =
                 s"$nameString sat down at the table with: \n- bet of: $bid\n- money: $validMoney\n- table id: $tableID"
             } yield messageComplete
@@ -259,9 +259,10 @@ object ServerSharedCommand {
         stringListID.split("\\s+").toList,
         connectToDataBase
       )
-      listPlayers <- fetchPlayers(someTableID).transact(connectToDataBase)
-      _ <- searchCombination(listPlayers, connectToDataBase)
-      response = s"Game has start for table $someTableID"
+      listPlayersDB <- fetchPlayers(someTableID).transact(connectToDataBase)
+      stringName = listToName(listPlayersDB.map(player => player.name))
+      _ <- searchCombination(listPlayersDB, connectToDataBase)
+      response = s"Game has start with players: \n$stringName $someTableID"
     } yield response
 
   def checkSharedRequest(

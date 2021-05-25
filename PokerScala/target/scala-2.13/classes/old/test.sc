@@ -9,6 +9,7 @@ val s =  List(1,2,2,3,4,2,5,6)
 val s0:List[Int] = List()
 val s1:List[Int] = List(1)
 val s4 = List(1,2,3,4)
+val ss =List("11", "22" , "33")
 Set(0) ++ s
 
 1 match {
@@ -16,4 +17,5 @@ Set(0) ++ s
   case d => ()
 }
 s.find(f => f == 4)
-Player()
+"fedfds ds fdsf dsf sdf "replaceFirst("sdf", "")
+List(1,2).drop(1)
