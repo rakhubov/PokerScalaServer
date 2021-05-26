@@ -8,8 +8,9 @@ import doobie.Transactor
 import doobie.implicits._
 import gameData.CardManipulation._
 import gameData.GameData._
-import gameData.RefactorFunction.{PlayerFromPlayerDB, listToName}
+import gameData.RefactorFunction.{PlayerFromPlayerDB, listToName, listToString}
 import gameData._
+import errorHanding.ErrorsResponse._
 import io.chrisdavenport.fuuid.FUUID
 import searchWinner.SearchWinner._
 
@@ -18,9 +19,9 @@ import java.util.UUID
 object ServerPrivateCommand {
 
   def registrationForPlayer(
-    message: List[String],
-    connectToDataBase: Transactor[IO]
-  ): IO[String] = {
+      message: List[String],
+      connectToDataBase: Transactor[IO]
+  ): IO[Either[Errors, String]] = {
     message match {
       case name :: money :: Nil =>
         money.toIntOption match {
@@ -31,17 +32,17 @@ object ServerPrivateCommand {
                 registrationInDB(id, name, moneyInt).transact(connectToDataBase)
               response =
                 s"Your registration was successful: \n- your name is: $name \n- on your account: $money \n- your id is: $id"
-            } yield response
-          case _ => IO(s"error $message money invalid format")
+            } yield Right(response)
+          case _ => IO(Left(FormatMoney(money)))
         }
-      case _ => IO(s"error $message data not parsing")
+      case _ => IO(Left(InvalidNumberParameters(listToString(message))))
     }
   }
 
   def fetchPlayerCards(
-    playerID: String,
-    connectToDataBase: Transactor[IO]
-  ): IO[String] = {
+      playerID: String,
+      connectToDataBase: Transactor[IO]
+  ): IO[Either[Errors, String]] = {
     val validID = FUUID.fromString(playerID) match {
       case Right(value) => UUID.fromString(value.toString)
       case _            => UUID.randomUUID()
@@ -55,17 +56,19 @@ object ServerPrivateCommand {
               .getOrElse(numberNotEqualCard) != numberNotEqualCard
               && card2.toIntOption
                 .getOrElse(numberNotEqualCard) != numberNotEqualCard) =>
-          "You card:  " + (cardIntToString getOrElse (card1.toInt, "")) +
-            ", " + (cardIntToString getOrElse (card2.toInt, ""))
-        case _ => s"error fetchCard $playerID"
+          Right(
+            "You card:  " + (cardIntToString getOrElse (card1.toInt, "")) +
+              ", " + (cardIntToString getOrElse (card2.toInt, ""))
+          )
+        case _ => Left(InvalidPlayerID(playerID))
       }
     } yield mapPlayerCard
   }
 
   def fetchTableCards(
-    playerID: String,
-    connectToDataBase: Transactor[IO]
-  ): IO[String] = {
+      playerID: String,
+      connectToDataBase: Transactor[IO]
+  ): IO[Either[Errors, String]] = {
     val validID = FUUID.fromString(playerID) match {
       case Right(value) => UUID.fromString(value.toString)
       case _            => UUID.randomUUID()
@@ -89,21 +92,23 @@ object ServerPrivateCommand {
             "\n" +
               (cardIntToString getOrElse (card, "")) + ", "
           )
-          "Table card:  " + stringCard.lift(0).getOrElse("") + stringCard
-            .lift(1)
-            .getOrElse("") +
-            stringCard.lift(2).getOrElse("") + stringCard
+          Right(
+            "Table card:  " + stringCard.lift(0).getOrElse("") + stringCard
+              .lift(1)
+              .getOrElse("") +
+              stringCard.lift(2).getOrElse("") + stringCard
               .lift(3)
               .getOrElse("") +
-            stringCard.lift(4).getOrElse("")
-        } else s"error fetchCard $playerID"
+              stringCard.lift(4).getOrElse("")
+          )
+        } else Left(InvalidFetchCardByID(playerID))
     } yield mapPlayerCard
   }
 
   def fetchCombination(
-    id: String,
-    connectToDataBase: Transactor[IO]
-  ): IO[String] = {
+      id: String,
+      connectToDataBase: Transactor[IO]
+  ): IO[Either[Errors, String]] = {
     val validID = FUUID.fromString(id) match {
       case Right(value) => UUID.fromString(value.toString)
       case _            => UUID.randomUUID()
@@ -114,18 +119,24 @@ object ServerPrivateCommand {
           .transact(
             connectToDataBase
           )
-      someTableID    = tableID.getOrElse(UUID.randomUUID())
+      someTableID = tableID.getOrElse(UUID.randomUUID())
       listPlayersDB <- fetchPlayers(someTableID).transact(connectToDataBase)
-      listPlayer     = listPlayersDB.map(player => PlayerFromPlayerDB(player))
+      listPlayer = listPlayersDB.map(player => PlayerFromPlayerDB(player))
       player =
         listPlayer
           .find(player => player.playerID == validID)
           .getOrElse(Player())
       playerCombination = interpretationCardCombination(player)
-    } yield playerCombination
+      response =
+        if (playerCombination == "") Left(InvalidPlayerID(id))
+        else Right(playerCombination)
+    } yield response
   }
 
-  def fetchWinner(id: String, connectToDataBase: Transactor[IO]): IO[String] = {
+  def fetchWinner(
+      id: String,
+      connectToDataBase: Transactor[IO]
+  ): IO[Either[Errors, String]] = {
     val validID = FUUID.fromString(id) match {
       case Right(value) => UUID.fromString(value.toString)
       case _            => UUID.randomUUID()
@@ -136,10 +147,10 @@ object ServerPrivateCommand {
           .transact(
             connectToDataBase
           )
-      someTableID    = tableID.getOrElse(UUID.randomUUID())
+      someTableID = tableID.getOrElse(UUID.randomUUID())
       listPlayersDB <- fetchPlayers(someTableID).transact(connectToDataBase)
-      listPlayer     = listPlayersDB.map(player => PlayerFromPlayerDB(player))
-      listWinners    = searchWinner(listPlayer)
+      listPlayer = listPlayersDB.map(player => PlayerFromPlayerDB(player))
+      listWinners = searchWinner(listPlayer)
       winnerName =
         if (listWinners.headOption.getOrElse(Player()).playerID == validID)
           "YOU"
@@ -149,13 +160,16 @@ object ServerPrivateCommand {
         listWinners.headOption.getOrElse(Player()),
         s"$winnerName WON with a"
       )
-    } yield winner
+      validWinner =
+        if (winner == 0) Left(InvalidPlayerID(id))
+        else Right(winner)
+    } yield validWinner
   }
 
   def checkPrivatRequest(
-    message: String,
-    connectToDataBase: Transactor[IO]
-  ): IO[String] = {
+      message: String,
+      connectToDataBase: Transactor[IO]
+  ): IO[Either[Errors, String]] = {
     message.split("\\s+").toList match {
       case "registration" :: next =>
         registrationForPlayer(next, connectToDataBase)
@@ -164,7 +178,7 @@ object ServerPrivateCommand {
       case "myCombination" :: id :: Nil =>
         fetchCombination(id, connectToDataBase)
       case "fetchWinner" :: id :: Nil => fetchWinner(id, connectToDataBase)
-      case _                          => IO(s"error $message invalid private request")
+      case _                          => IO(Left(InvalidPrivatRequest(message)))
     }
   }
 }
@@ -175,8 +189,8 @@ object ServerPrivateCommand {
 object ServerSharedCommand {
 
   def tableSearch(
-    message: List[String],
-    connectToDataBase: Transactor[IO]
+      message: List[String],
+      connectToDataBase: Transactor[IO]
   ): IO[String] = {
     message match {
       case playerID :: bid :: money :: Nil =>
@@ -233,8 +247,8 @@ object ServerSharedCommand {
   }
 
   def startGame(
-    playerID: String,
-    connectToDataBase: Transactor[IO]
+      playerID: String,
+      connectToDataBase: Transactor[IO]
   )(implicit parallel: Parallel[IO]): IO[String] =
     for {
       tableID <-
@@ -253,11 +267,11 @@ object ServerSharedCommand {
           .transact(
             connectToDataBase
           )
-      stringListID   = listPlayersID.getOrElse("").trim
-      playersNumber  = stringListID.split("\\s+").toList.size
-      numberCard     = 5 + playersNumber * 2
-      allCardInGame  = generationCard(numberCard).toList
-      cardTable      = allCardInGame.take(5)
+      stringListID = listPlayersID.getOrElse("").trim
+      playersNumber = stringListID.split("\\s+").toList.size
+      numberCard = 5 + playersNumber * 2
+      allCardInGame = generationCard(numberCard).toList
+      cardTable = allCardInGame.take(5)
       allCardInHands = allCardInGame.takeRight(numberCard - 5)
       _ <- writePlayerCard(
         cardTable,
@@ -266,14 +280,14 @@ object ServerSharedCommand {
         connectToDataBase
       )
       listPlayersDB <- fetchPlayers(someTableID).transact(connectToDataBase)
-      stringName     = listToName(listPlayersDB.map(player => player.name))
-      _             <- searchCombination(listPlayersDB, connectToDataBase)
-      response       = s"Game has start with players: \n$stringName $someTableID"
+      stringName = listToName(listPlayersDB.map(player => player.name))
+      _ <- searchCombination(listPlayersDB, connectToDataBase)
+      response = s"Game has start with players: \n$stringName $someTableID"
     } yield response
 
   def checkSharedRequest(
-    message: String,
-    connectToDataBase: Transactor[IO]
+      message: String,
+      connectToDataBase: Transactor[IO]
   )(implicit parallel: Parallel[IO]): IO[String] = {
     message.split("\\s+").toList match {
       case "game" :: next =>

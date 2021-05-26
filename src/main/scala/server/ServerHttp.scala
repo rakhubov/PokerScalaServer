@@ -4,6 +4,7 @@ import cats.Parallel
 import cats.effect.{ExitCode, IO, _}
 import cats.implicits.toSemigroupKOps
 import doobie.Transactor
+import errorHanding.ErrorsResponse._
 import fs2.concurrent.{Queue, Topic}
 import fs2.{Pipe, Stream}
 import org.http4s.HttpRoutes
@@ -12,6 +13,7 @@ import org.http4s.implicits.http4sKleisliResponseSyntaxOptionT
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.websocket.WebSocketFrame
+
 import scala.concurrent.ExecutionContext
 
 object WebSocketServer {
@@ -59,9 +61,8 @@ object WebSocketServer {
 
         val checkMessage: Pipe[IO, WebSocketFrame, WebSocketFrame] = _.evalMap {
           case WebSocketFrame.Text(message, _) =>
-            checkPrivatRequest(message, connectToDataBase).map(response =>
-              WebSocketFrame.Text(response)
-            )
+            privatErrorHandling(checkPrivatRequest(message, connectToDataBase))
+              .map(response => WebSocketFrame.Text(response))
         }
 
         for {

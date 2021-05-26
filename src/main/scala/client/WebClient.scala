@@ -57,12 +57,12 @@ object WebSocketClient extends IOApp {
           playerID <- playerID1
           _ <- client.send(WSFrame.Text(s"game $playerID 10 1000"))
           satDown <- filterByHead(name)(client)
-          _ = Thread.sleep(4000)
+          _ = Thread.sleep(5000)
           tableID = satDown.split("\\s+").toList.lastOption.getOrElse("")
           _ = println(satDown + " \n")
           _ <- client.send(WSFrame.Text(s"start $playerID"))
           start <- twoFilterPrintLast("Game", tableID)(client)
-          _ = Thread.sleep(4000)
+          _ = Thread.sleep(5000)
           _ = println(start.replaceFirst(tableID, "") + " \n")
         } yield (playerID, tableID)
       }
@@ -72,14 +72,14 @@ object WebSocketClient extends IOApp {
         playerID = id._1
         _ <- client.send(WSFrame.Text(s"MyCard $playerID"))
         receive <- client.receive
-        _ = Thread.sleep(4000)
+        _ = Thread.sleep(5000)
         _ = receive match {
           case Some(WSFrame.Text(message, _)) =>
             println(message + "\n")
           case _ => println()
         }
         _ <- client.send(WSFrame.Text(s"TableCard $playerID"))
-        _ = Thread.sleep(4000)
+        _ = Thread.sleep(5000)
         receive <- client.receive
         _ = receive match {
           case Some(WSFrame.Text(message, _)) =>
@@ -87,7 +87,7 @@ object WebSocketClient extends IOApp {
           case _ => println()
         }
         _ <- client.send(WSFrame.Text(s"myCombination $playerID"))
-        _ = Thread.sleep(4000)
+        _ = Thread.sleep(5000)
         receive <- client.receive
         _ = receive match {
           case Some(WSFrame.Text(message, _)) =>
@@ -95,7 +95,7 @@ object WebSocketClient extends IOApp {
           case _ => println()
         }
         _ <- client.send(WSFrame.Text(s"fetchWinner $playerID"))
-        _ = Thread.sleep(4000)
+        _ = Thread.sleep(5000)
         receive <- client.receive
         _ = receive match {
           case Some(WSFrame.Text(message, _)) =>
