@@ -1,13 +1,14 @@
 package gameData
 
 import cats.effect.IO
+import io.chrisdavenport.log4cats.SelfAwareStructuredLogger
 import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 
 import java.util.UUID
 
 object GameData {
 
-  val logger = Slf4jLogger.getLogger[IO]
+  val logger: SelfAwareStructuredLogger[IO] = Slf4jLogger.getLogger[IO]
 
   final case class PlayerRegistration(
     id: UUID,
@@ -47,7 +48,7 @@ object GameData {
     combination: Int = 0
   )
 
-  val cardCombination =
+  val cardCombination: Map[Int, String] =
     Map[Int, String](
       0 -> "Combination not found",
       1 -> "High Card",
@@ -61,7 +62,7 @@ object GameData {
       9 -> "Street Flash"
     )
 
-  val cardPower =
+  val cardPower: Map[Int, String] =
     Map[Int, String](
       0  -> "of Twos",
       4  -> "of Triples",
@@ -78,7 +79,7 @@ object GameData {
       48 -> "of Aces"
     )
 
-  val powerKicker =
+  val powerKicker: Map[Int, String] =
     Map[Int, String](
       0  -> "Two",
       4  -> "Triple",
@@ -95,7 +96,7 @@ object GameData {
       48 -> "Ace"
     )
 
-  val cardIntToString =
+  val cardIntToString: Map[Int, String] =
     Map[Int, String](
       51 -> "Ace spades",
       50 -> "Ace hearts",

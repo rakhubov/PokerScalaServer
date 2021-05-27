@@ -1,25 +1,24 @@
 package server
 
 import cats.Parallel
-import cats.effect.{ConcurrentEffect, ContextShift, IO, Timer}
 import cats.effect.concurrent.Ref
+import cats.effect.{ConcurrentEffect, ContextShift, IO, Timer}
 import dataBase.RequestInDB._
 import doobie.Transactor
 import doobie.implicits._
+import errorHanding.ErrorsResponse._
 import gameData.CardManipulation._
 import gameData.GameData._
 import gameData.RefactorFunction.{PlayerFromPlayerDB, listToName, listToString}
-import gameData._
-import errorHanding.ErrorsResponse._
 import io.chrisdavenport.fuuid.FUUID
 import searchWinner.SearchWinner._
-import cats.syntax.all._
 
 import java.util.UUID
 import scala.concurrent.ExecutionContext
 
 object ServerPrivateCommand {
-
+  implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
+  val launchError: IO[Unit]         = IO.raiseError(new Exception("error!"))
   def registrationForPlayer(
     message: List[String],
     connectToDataBase: Transactor[IO]
@@ -28,10 +27,16 @@ object ServerPrivateCommand {
       case name :: money :: Nil =>
         money.toIntOption match {
           case Some(moneyInt) =>
-            val id = UUID.randomUUID();
+            val id = UUID.randomUUID
             for {
+              fiber <- launchError.start
               _ <-
-                registrationInDB(id, name, moneyInt).transact(connectToDataBase)
+                registrationInDB(id, name, moneyInt).transact(connectToDataBase).handleErrorWith { error =>
+                  fiber.cancel *> IO.raiseError(error)
+                }
+              _ <- fiber.join.handleErrorWith { error =>
+                IO(println(s"log.error: $error"))
+              }
               response =
                 s"Your registration was successful: \n- your name is: $name \n- on your account: $money \n- your id is: $id"
             } yield Right(response)
@@ -47,11 +52,14 @@ object ServerPrivateCommand {
   ): IO[Either[Errors, String]] = {
     val validID = FUUID.fromString(playerID) match {
       case Right(value) => UUID.fromString(value.toString)
-      case _            => UUID.randomUUID()
+      case _            => UUID.randomUUID
     }
     for {
+      fiber <- launchError.start
       playerCard <-
-        fetchPlayerCardByID(validID).option.transact(connectToDataBase)
+        fetchPlayerCardByID(validID).option.transact(connectToDataBase).handleErrorWith { error =>
+          fiber.cancel *> IO.raiseError(error)
+        }
       mapPlayerCard = playerCard.getOrElse("").split("\\s+").toList match {
         case card1 :: card2 :: Nil
             if (card1.toIntOption
@@ -63,6 +71,9 @@ object ServerPrivateCommand {
               ", " + (cardIntToString getOrElse (card2.toInt, ""))
           )
         case _ => Left(InvalidPlayerID(playerID))
+      }
+      _ <- fiber.join.handleErrorWith { error =>
+        IO(println(s"log.error: $error"))
       }
     } yield mapPlayerCard
   }
@@ -76,8 +87,11 @@ object ServerPrivateCommand {
       case _            => UUID.randomUUID()
     }
     for {
+      fiber <- launchError.start
       playerAndTableCard <-
-        fetchTableCardByID(validID).option.transact(connectToDataBase)
+        fetchTableCardByID(validID).option.transact(connectToDataBase).handleErrorWith { error =>
+          fiber.cancel *> IO.raiseError(error)
+        }
       playerCard =
         playerAndTableCard
           .getOrElse("")
@@ -86,16 +100,16 @@ object ServerPrivateCommand {
           .map(card => card.toIntOption.getOrElse(numberNotEqualCard))
       mapPlayerCard =
         if (
-          (playerCard.contains(
+          !playerCard.contains(
             numberNotEqualCard
-          ) == false) && playerCard.size == 7
+          ) && playerCard.size == 7
         ) {
           val stringCard = playerCard.map(card =>
             "\n" +
               (cardIntToString getOrElse (card, "")) + ", "
           )
           Right(
-            "Table card:  " + stringCard.lift(0).getOrElse("") + stringCard
+            "Table card:  " + stringCard.headOption.getOrElse("") + stringCard
               .lift(1)
               .getOrElse("") +
               stringCard.lift(2).getOrElse("") + stringCard
@@ -104,6 +118,9 @@ object ServerPrivateCommand {
               stringCard.lift(4).getOrElse("")
           )
         } else Left(InvalidFetchCardByID(playerID))
+      _ <- fiber.join.handleErrorWith { error =>
+        IO(println(s"log.error: $error"))
+      }
     } yield mapPlayerCard
   }
 
@@ -116,11 +133,15 @@ object ServerPrivateCommand {
       case _            => UUID.randomUUID()
     }
     for {
+      fiber <- launchError.start
       tableID <-
         fetchTableByPlayerID(validID).option
           .transact(
             connectToDataBase
           )
+          .handleErrorWith { error =>
+            fiber.cancel *> IO.raiseError(error)
+          }
       someTableID    = tableID.getOrElse(UUID.randomUUID())
       listPlayersDB <- fetchPlayers(someTableID).transact(connectToDataBase)
       listPlayer     = listPlayersDB.map(player => PlayerFromPlayerDB(player))
@@ -132,6 +153,9 @@ object ServerPrivateCommand {
       response =
         if (playerCombination == "") Left(InvalidPlayerID(id))
         else Right(playerCombination)
+      _ <- fiber.join.handleErrorWith { error =>
+        IO(println(s"log.error: $error"))
+      }
     } yield response
   }
 
@@ -144,11 +168,15 @@ object ServerPrivateCommand {
       case _            => UUID.randomUUID()
     }
     for {
+      fiber <- launchError.start
       tableID <-
         fetchTableByPlayerID(validID).option
           .transact(
             connectToDataBase
           )
+          .handleErrorWith { error =>
+            fiber.cancel *> IO.raiseError(error)
+          }
       someTableID    = tableID.getOrElse(UUID.randomUUID())
       listPlayersDB <- fetchPlayers(someTableID).transact(connectToDataBase)
       listPlayer     = listPlayersDB.map(player => PlayerFromPlayerDB(player))
@@ -165,6 +193,9 @@ object ServerPrivateCommand {
       validWinner =
         if (winner == 0) Left(InvalidPlayerID(id))
         else Right(winner)
+      _ <- fiber.join.handleErrorWith { error =>
+        IO(println(s"log.error: $error"))
+      }
     } yield validWinner
   }
 
@@ -214,14 +245,13 @@ object ServerSharedCommand {
                   )
               refTableID <- Ref.of[IO, UUID](UUID.randomUUID())
               _ <- tablesID.headOption match {
-                case Some(id) => {
+                case Some(id) =>
                   refTableID.set(id).void
-                }
-                case _ => {
-                  val id = UUID.randomUUID();
+                case _ =>
+                  val id = UUID.randomUUID
                   refTableID.set(id) *>
                     createTable(id, validBid).transact(connectToDataBase)
-                }
+
               }
               tableID <- refTableID.get
               name <-
@@ -288,7 +318,7 @@ object ServerSharedCommand {
       )
       listPlayersDB <- fetchPlayers(someTableID).transact(connectToDataBase)
       stringName     = listToName(listPlayersDB.map(player => player.name))
-      _             <- searchCombination(listPlayersDB, connectToDataBase, cs) //, cs , concurrent, timer)
+      _             <- searchCombination(listPlayersDB, connectToDataBase, cs)
       response =
         if (stringName == "") Left(InvalidPlayerIdOrNotSatD(playerID))
         else Right(s"Game has start with players: \n$stringName $someTableID")

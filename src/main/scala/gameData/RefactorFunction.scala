@@ -3,6 +3,8 @@ package gameData
 import gameData.CardManipulation.numberNotEqualCard
 import gameData.GameData.{Player, PlayerDB}
 
+import scala.annotation.tailrec
+
 object RefactorFunction {
 
   def PlayerFromPlayerDB(playerDB: PlayerDB): Player = {
@@ -60,8 +62,9 @@ object RefactorFunction {
     }
   }
 
+  @tailrec
   def listToString[F](list: List[F], acc: String = ""): String = {
-    if (list.size > 0) {
+    if (list.nonEmpty) {
       listToString(
         list.drop(1),
         acc + list.headOption.getOrElse(numberNotEqualCard).toString + " "
@@ -69,6 +72,7 @@ object RefactorFunction {
     } else acc.trim
   }
 
+  @tailrec
   def listToName[F](list: List[F], acc: String = ""): String = {
     if (list.size > 1) {
       listToName(
