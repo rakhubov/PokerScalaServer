@@ -6,9 +6,9 @@ import doobie.{ExecutionContexts, Transactor}
 
 object DbConfig {
   val dbDriverName = "org.h2.Driver"
-  val dbUrl = "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1"
-  val dbUser = ""
-  val dbPwd = ""
+  val dbUrl        = "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1"
+  val dbUser       = ""
+  val dbPwd        = ""
 }
 
 object DbTransactor {
@@ -17,7 +17,7 @@ object DbTransactor {
   def pooled[F[_]: ContextShift: Async]: Resource[F, Transactor[F]] =
     for {
       awaitConnect <- ExecutionContexts.fixedThreadPool[F](10)
-      executeJDBC <- Blocker[F]
+      executeJDBC  <- Blocker[F]
       connect <- HikariTransactor.newHikariTransactor[F](
         driverClassName = dbDriverName,
         url = dbUrl,

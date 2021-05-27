@@ -34,8 +34,8 @@ object CreateDB {
       |  combination INT);""".stripMargin
 
   val registration = Fragment.const(createTablePlayerRegistrationSql)
-  val tables = Fragment.const(createTableGameTableSql)
-  val players = Fragment.const(createTablePlayerAtTableSql)
+  val tables       = Fragment.const(createTableGameTableSql)
+  val players      = Fragment.const(createTablePlayerAtTableSql)
 
   def setup(): ConnectionIO[Unit] =
     for {

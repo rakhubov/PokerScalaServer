@@ -19,7 +19,8 @@ import scala.concurrent.ExecutionContext
 object WebSocketServer {
 
   def run(
-    connectToDataBase: Transactor[IO]
+    connectToDataBase: Transactor[IO],
+    cs: ContextShift[IO]
   )(implicit
     concurrent: ConcurrentEffect[IO],
     timer: Timer[IO],
@@ -31,7 +32,7 @@ object WebSocketServer {
         BlazeServerBuilder[IO](ExecutionContext.global)
           .bindHttp(port = 8080, host = "localhost")
           .withHttpApp(
-            httpRoute(connectToDataBase, chatTopic, concurrent, timer, parallel)
+            httpRoute(connectToDataBase, cs, chatTopic, concurrent, timer, parallel)
           )
           .serve
           .compile
@@ -40,13 +41,14 @@ object WebSocketServer {
 
   private def httpRoute(
     connectToDataBase: Transactor[IO],
+    cs: ContextShift[IO],
     chatTopic: Topic[IO, String],
     concurrent: ConcurrentEffect[IO],
     timer: Timer[IO],
     parallel: Parallel[IO]
   ) = {
     privateRoute(connectToDataBase)(concurrent, timer) <+>
-      sharedRoute(connectToDataBase, chatTopic)(parallel)
+      sharedRoute(connectToDataBase, chatTopic, cs, concurrent, timer)(parallel)
   }.orNotFound
 
   //
@@ -76,7 +78,10 @@ object WebSocketServer {
 
   private def sharedRoute(
     connectToDataBase: Transactor[IO],
-    chatTopic: Topic[IO, String]
+    chatTopic: Topic[IO, String],
+    cs: ContextShift[IO],
+    concurrent: ConcurrentEffect[IO],
+    timer: Timer[IO]
   )(implicit parallel: Parallel[IO]): HttpRoutes[IO] = {
     HttpRoutes.of[IO] { case GET -> Root / "chat" =>
       import ServerSharedCommand.checkSharedRequest
@@ -84,7 +89,7 @@ object WebSocketServer {
       WebSocketBuilder[IO].build(
         receive =
           chatTopic.publish.compose[Stream[IO, WebSocketFrame]](_.evalMap { case WebSocketFrame.Text(message, _) =>
-            errorHandling(checkSharedRequest(message, connectToDataBase))
+            errorHandling(checkSharedRequest(message, connectToDataBase, cs, concurrent, timer))
           }),
         send = chatTopic.subscribe(20).map(WebSocketFrame.Text(_))
       )

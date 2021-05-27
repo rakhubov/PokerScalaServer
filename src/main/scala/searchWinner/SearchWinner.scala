@@ -1,8 +1,8 @@
 package searchWinner
 
-import cats.Parallel
+import cats.{Monad, Parallel}
 import cats.effect.concurrent.Ref
-import cats.effect.{ExitCode, IO}
+import cats.effect.{ConcurrentEffect, ContextShift, ExitCode, IO, Sync, Timer}
 import cats.implicits.catsSyntaxParallelSequence
 import dataBase.RequestInDB.writeGameCombination
 import doobie.Transactor
@@ -11,13 +11,14 @@ import gameData.GameData._
 import gameData.RefactorFunction._
 import searchWinner.CheckCombination._
 import doobie.implicits._
+import cats.syntax.all._
 
 object SearchWinner {
-
-  def searchCombination(
-      listPlayers: List[PlayerDB],
-      connectToDataBase: Transactor[IO]
-  )(implicit parallel: Parallel[IO]): IO[ExitCode] =
+  def searchCombination[F[_]: ContextShift](
+    listPlayers: List[PlayerDB],
+    connectToDataBase: Transactor[F],
+    cs: ContextShift[IO]
+  )(implicit parallel: Parallel[F], sy: Sync[F]): F[ExitCode.type] =
     if (listPlayers.size > 0) {
       val player = PlayerFromPlayerDB(
         listPlayers.headOption.getOrElse(PlayerDB())
@@ -27,7 +28,7 @@ object SearchWinner {
         ((player.playerCard ++ player.allCard)
           .contains(numberNotEqualCard) == false)
       ) {
-        val playerRefIO: IO[Ref[IO, Player]] = Ref.of[IO, Player](player)
+        val playerRefIO: F[Ref[F, Player]] = Ref.of[F, Player](player)
         for {
           playerRef <- playerRefIO
           _ <- List(
@@ -40,18 +41,18 @@ object SearchWinner {
             oneOrTwoPairRef(playerRef),
             highCardRef(playerRef)
           ).parSequence.void
-          player <- playerRef.get
+          player               <- playerRef.get
           stringCombinationCard = listToString(player.cardForCombination)
-          _ = println(player)
+          _                     = println(player)
           _ <- writeGameCombination(
             player.playerID,
             stringCombinationCard,
             player.combination
           ).transact(connectToDataBase)
-          _ <- searchCombination(listPlayers.drop(1), connectToDataBase)
-        } yield (ExitCode.Success)
-      } else IO(ExitCode.Success)
-    } else IO(ExitCode.Success)
+          _ <- searchCombination(listPlayers.drop(1), connectToDataBase, cs)
+        } yield ExitCode
+      } else ExitCode.pure[F]
+    } else ExitCode.pure[F]
 
   def searchWinner(listPlayer: List[Player]) = {
     listPlayer

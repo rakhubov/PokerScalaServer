@@ -1,7 +1,7 @@
 package server
 
 import cats.Parallel
-import cats.effect.IO
+import cats.effect.{ConcurrentEffect, ContextShift, IO, Timer}
 import cats.effect.concurrent.Ref
 import dataBase.RequestInDB._
 import doobie.Transactor
@@ -13,8 +13,10 @@ import gameData._
 import errorHanding.ErrorsResponse._
 import io.chrisdavenport.fuuid.FUUID
 import searchWinner.SearchWinner._
+import cats.syntax.all._
 
 import java.util.UUID
+import scala.concurrent.ExecutionContext
 
 object ServerPrivateCommand {
 
@@ -247,10 +249,14 @@ object ServerSharedCommand {
     }
   }
 
-  def startGame(
+  def startGame[F[_]](
     playerID: String,
-    connectToDataBase: Transactor[IO]
-  )(implicit parallel: Parallel[IO]): IO[Either[Errors, String]] =
+    connectToDataBase: Transactor[IO],
+    cs: ContextShift[IO],
+    concurrent: ConcurrentEffect[IO],
+    timer: Timer[IO]
+  )(implicit parallel: Parallel[IO]): IO[Either[Errors, String]] = {
+    implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
     for {
       tableID <-
         fetchTableByPlayerID(FUUID.fromString(playerID) match {
@@ -282,21 +288,25 @@ object ServerSharedCommand {
       )
       listPlayersDB <- fetchPlayers(someTableID).transact(connectToDataBase)
       stringName     = listToName(listPlayersDB.map(player => player.name))
-      _             <- searchCombination(listPlayersDB, connectToDataBase)
+      _             <- searchCombination(listPlayersDB, connectToDataBase, cs) //, cs , concurrent, timer)
       response =
         if (stringName == "") Left(InvalidPlayerIdOrNotSatD(playerID))
         else Right(s"Game has start with players: \n$stringName $someTableID")
     } yield response
+  }
 
   def checkSharedRequest(
     message: String,
-    connectToDataBase: Transactor[IO]
+    connectToDataBase: Transactor[IO],
+    cs: ContextShift[IO],
+    concurrent: ConcurrentEffect[IO],
+    timer: Timer[IO]
   )(implicit parallel: Parallel[IO]): IO[Either[Errors, String]] = {
     message.split("\\s+").toList match {
       case "game" :: next =>
         tableSearch(next, connectToDataBase)
       case "start" :: id :: Nil =>
-        startGame(id, connectToDataBase)
+        startGame(id, connectToDataBase, cs, concurrent, timer)
       case _ => IO(Left(InvalidSharedRequest(message)))
     }
   }

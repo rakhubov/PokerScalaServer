@@ -10,41 +10,41 @@ object GameData {
   val logger = Slf4jLogger.getLogger[IO]
 
   final case class PlayerRegistration(
-      id: UUID,
-      name: String,
-      moneyPersonalAccount: Int
+    id: UUID,
+    name: String,
+    moneyPersonalAccount: Int
   )
 
   final case class GameTable(
-      id: UUID,
-      startGame: Boolean = false,
-      idPlayer: List[UUID] = List(),
-      bidForTable: Int = 0,
-      dealerName: UUID = UUID.randomUUID(),
-      playerInGame: List[String] = List(),
-      numberOpenCard: Int = 0,
-      generatedCards: Set[Int] = Set()
+    id: UUID,
+    startGame: Boolean = false,
+    idPlayer: List[UUID] = List(),
+    bidForTable: Int = 0,
+    dealerName: UUID = UUID.randomUUID(),
+    playerInGame: List[String] = List(),
+    numberOpenCard: Int = 0,
+    generatedCards: Set[Int] = Set()
   )
 
   final case class PlayerDB(
-      playerID: UUID = UUID.randomUUID(),
-      tableID: UUID = UUID.randomUUID(),
-      name: String = "",
-      playerCard: String = "",
-      tableAndPlayerCard: String = "",
-      cardForCombination: String = "",
-      combination: Int = 0
+    playerID: UUID = UUID.randomUUID(),
+    tableID: UUID = UUID.randomUUID(),
+    name: String = "",
+    playerCard: String = "",
+    tableAndPlayerCard: String = "",
+    cardForCombination: String = "",
+    combination: Int = 0
 //      money: Int = 0,
 //      playerBid: Int = 0
   )
 
   final case class Player(
-      playerID: UUID = UUID.randomUUID(),
-      name: String = "",
-      playerCard: List[Int] = List(),
-      allCard: Vector[Int] = Vector(),
-      cardForCombination: List[Int] = List(),
-      combination: Int = 0
+    playerID: UUID = UUID.randomUUID(),
+    name: String = "",
+    playerCard: List[Int] = List(),
+    allCard: Vector[Int] = Vector(),
+    cardForCombination: List[Int] = List(),
+    combination: Int = 0
   )
 
   val cardCombination =
@@ -63,9 +63,9 @@ object GameData {
 
   val cardPower =
     Map[Int, String](
-      0 -> "of Twos",
-      4 -> "of Triples",
-      8 -> "of Fours",
+      0  -> "of Twos",
+      4  -> "of Triples",
+      8  -> "of Fours",
       12 -> "of Fives",
       16 -> "of Sixes",
       20 -> "of Sevens",
@@ -80,9 +80,9 @@ object GameData {
 
   val powerKicker =
     Map[Int, String](
-      0 -> "Two",
-      4 -> "Triple",
-      8 -> "Four",
+      0  -> "Two",
+      4  -> "Triple",
+      8  -> "Four",
       12 -> "Five",
       16 -> "Six",
       20 -> "Seven",
@@ -139,16 +139,16 @@ object GameData {
       12 -> "5 clubs",
       11 -> "4 spades",
       10 -> "4 hearts",
-      9 -> "4 diamonds",
-      8 -> "4 clubs",
-      7 -> "3 spades",
-      6 -> "3 hearts",
-      5 -> "3 diamonds",
-      4 -> "3 clubs",
-      3 -> "2 spades",
-      2 -> "2 hearts",
-      1 -> "2 diamonds",
-      0 -> "2 clubs"
+      9  -> "4 diamonds",
+      8  -> "4 clubs",
+      7  -> "3 spades",
+      6  -> "3 hearts",
+      5  -> "3 diamonds",
+      4  -> "3 clubs",
+      3  -> "2 spades",
+      2  -> "2 hearts",
+      1  -> "2 diamonds",
+      0  -> "2 clubs"
     )
 
 //  val cardIntToString =
