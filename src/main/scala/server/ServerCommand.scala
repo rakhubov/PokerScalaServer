@@ -12,6 +12,7 @@ import gameData.GameData._
 import gameData.RefactorFunction.{PlayerFromPlayerDB, listToName, listToString}
 import io.chrisdavenport.fuuid.FUUID
 import searchWinner.SearchWinner._
+import server.ServerPrivateCommand.launchError
 
 import java.util.UUID
 import scala.concurrent.ExecutionContext
@@ -220,7 +221,8 @@ object ServerPrivateCommand {
 //
 
 object ServerSharedCommand {
-
+  implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
+  val launchError: IO[Unit]         = IO.raiseError(new Exception("error!"))
   def tableSearch(
     message: List[String],
     connectToDataBase: Transactor[IO]
@@ -237,12 +239,19 @@ object ServerSharedCommand {
         ) match {
           case (validPlayerID, Some(validBid), Some(validMoney)) =>
             for {
+              fiber <- launchError.start
               tablesID <-
                 fetchTableByBidNotStart(validBid)
                   .to[List]
                   .transact(
                     connectToDataBase
                   )
+                  .handleErrorWith { error =>
+                    fiber.cancel *> IO.raiseError(error)
+                  }
+              _ <- fiber.join.handleErrorWith { error =>
+                IO(println(s"log.error: $error"))
+              }
               refTableID <- Ref.of[IO, UUID](UUID.randomUUID())
               _ <- tablesID.headOption match {
                 case Some(id) =>
@@ -288,6 +297,7 @@ object ServerSharedCommand {
   )(implicit parallel: Parallel[IO]): IO[Either[Errors, String]] = {
     implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
     for {
+      fiber <- launchError.start
       tableID <-
         fetchTableByPlayerID(FUUID.fromString(playerID) match {
           case Right(value) => UUID.fromString(value.toString)
@@ -296,6 +306,12 @@ object ServerSharedCommand {
           .transact(
             connectToDataBase
           )
+          .handleErrorWith { error =>
+            fiber.cancel *> IO.raiseError(error)
+          }
+      _ <- fiber.join.handleErrorWith { error =>
+        IO(println(s"log.error: $error"))
+      }
       someTableID = tableID.getOrElse(UUID.randomUUID())
       _ <- startGameForTable(someTableID)
         .transact(connectToDataBase)
